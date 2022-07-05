@@ -1,0 +1,30 @@
+#include "Volume.h"
+
+Volume vol;
+
+void setup() {
+  vol.begin(); //default pin = D5; alternate = D6
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  
+  //scaling from 0 - 1023 to 0 - 255: (255.0 / 1023.0) *
+  int testVolume =  analogRead(A0); 
+
+  //scaling from 0 - 1023 to 31 - 16000
+//  int testFrequency = 31 + ((analogRead(A1)*(1.0 / 1023.0)) * (16000 - 31));
+
+  //Scaling using map
+//  int frequencyOutputValue = analogRead(A2);
+   //int testFrequency = map(frequencyOutputValue, 0, 1023, 31, 16000);
+
+//  Serial.println(frequencyOutputValue);
+//Serial.println(testFrequency);
+  Serial.println(testVolume);
+
+//  vol.tone(7040, testVolume);
+
+  delay(1);
+}

@@ -25,15 +25,12 @@ void setup() {
 void loop() {
   buttonNew = digitalRead(buttonPin);
 
-  while (buttonNew == 1){
+  while (!(buttonOld == 0 && buttonNew == 1)){
     addVolToProfile(volProfile[freqIndex]);
-    buttonNew = digitalRead(buttonPin);
-    Serial.println(buttonNew);
   }
+  delay(1000);
   
   Serial.println("Button Pressed");
-  freqIndex += 1;
-  buttonOld = buttonNew;
   
   delay(10000);
 }
@@ -59,7 +56,7 @@ int take_avg(){
 void addVolToProfile(int frequency){
   //potentiometer stabalized inputs
   int cur_sample = 0;
-  cur_sample = ((15969.0 / 1023.0) * analogRead(volumePot)) + 31;
+  cur_sample = (255.0 / 1023.0) * analogRead(volumePot);
   Serial.print(cur_sample);
   Serial.print(" avg: ");
   delayMicroseconds(300);
@@ -67,7 +64,5 @@ void addVolToProfile(int frequency){
   Serial.println(take_avg());
 
   //generates an audio frequency
-//  vol.tone(frequency, take_avg());
-
-  
+  vol.tone(frequency, take_avg());
 }
