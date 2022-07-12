@@ -7,14 +7,14 @@ int volProfile[8] = {125, 250, 500, 1000, 2000, 3000, 4000, 8000};
 int volumePot = A0;
 int buttonPin = 7;
 Volume vol;
-int buttonOld = 1;
 int buttonNew;
 int freqIndex = 0;
+int curVol;
 
 //Helper function definations
 void push(int val);
 int take_avg();
-void addVolToProfile(int frequency);
+int playFrequency(int frequency);           //plays the frequency with a volume control and returns the vol
 
 void setup() {
   Serial.begin(9600);
@@ -25,17 +25,33 @@ void setup() {
 void loop() {
   buttonNew = digitalRead(buttonPin);
 
-  while (buttonNew == 1){
-    addVolToProfile(volProfile[freqIndex]);
+  while (buttonNew == 1 && freqIndex <= 7){ //stops the hearing test if the profiling is done 
+    curVol = playFrequency(volProfile[freqIndex]);
     buttonNew = digitalRead(buttonPin);
     Serial.println(buttonNew);
+    //executes when button is pressed
+    if (buttonNew == 0 ){
+      Serial.println("Button Pressed ");
+      volProfile[freqIndex] = curVol;
+      Serial.println(freqIndex);
+      freqIndex += 1;
+      Serial.println(freqIndex);
+    }
+  }
+
+  //prints the profile
+  if (freqIndex >= 8){
+    vol.noTone();
+    Serial.println();
+    for (int i = 0; i <= 7; i++){
+      Serial.print(volProfile[i]);
+      Serial.print(" ");
+    }
   }
   
-  Serial.println("Button Pressed");
-  freqIndex += 1;
-  buttonOld = buttonNew;
   
-  delay(10000);
+  
+  delay(20000);
 }
 
 //Helper function implementation
@@ -56,18 +72,17 @@ int take_avg(){
   return sum/window_size;
 }
 
-void addVolToProfile(int frequency){
+int playFrequency(int frequency){
   //potentiometer stabalized inputs
   int cur_sample = 0;
-  cur_sample = ((15969.0 / 1023.0) * analogRead(volumePot)) + 31;
+  cur_sample = (255.0 / 1023.0) * analogRead(volumePot);
   Serial.print(cur_sample);
   Serial.print(" avg: ");
-  delayMicroseconds(300);
   push(cur_sample);
   Serial.println(take_avg());
 
   //generates an audio frequency
-//  vol.tone(frequency, take_avg());
+  vol.tone(frequency, take_avg());
 
-  
+  return take_avg();
 }
