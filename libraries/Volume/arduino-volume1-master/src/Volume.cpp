@@ -54,6 +54,10 @@ Volume::Volume()
 {
 }
 
+Volume::~Volume() {
+
+}
+
 void Volume::throwError(byte _errorNum) {
   end();
   while (true) {

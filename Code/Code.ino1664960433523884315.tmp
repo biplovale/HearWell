@@ -48,19 +48,18 @@ void loop() {
       Serial.print(curVol);
       interestedFreq.push_back(curFreq);
       profile[curFreq] = curVol;
-      stopValue += 1;
+      stopValue++;
     }
   }
 
-  Serial.println(stopValue);
   //prints the profile
-  if (stopValue >= noOfOctaves){
+  if (stopValue >= 8){
     vol.noTone();
     Serial.println();
-    for (int i = 0; i <= noOfOctaves; i++){
+    for (int i = 0; i <= 7; i++){
       Serial.print(interestedFreq[i]);
       Serial.print(": ");
-      Serial.print(profile[interestedFreq[i]]);
+      Serial.print(profile[interestedFreq]);
       Serial.println();
     }
   }
@@ -111,7 +110,7 @@ int playFrequency(int frequency){
   Serial.println(result);
 
   //generates an audio frequency
-  vol.tone(frequency, result);
+//  vol.tone(frequency, result);
 
   return result;
 }

@@ -13,6 +13,7 @@ class Volume
 {
   public:
     Volume();
+    ~Volume();
     void begin();
     void end();
     void alternatePin(bool enabled);
