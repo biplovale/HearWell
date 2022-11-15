@@ -1,5 +1,4 @@
-"# HearWell" 
+"# HearWell AudioVisualAnalyserTest" 
 
-Library: Arduino-Volume1
-https://github.com/connornishijima/arduino-volume1
-It is used to control volume and frequency for test mode
+This test is derived from the folowing git repo:
+https://github.com/G6EJD/ESP32-8-Octave-Audio-Spectrum-Display
