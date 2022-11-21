@@ -17,6 +17,7 @@ int curFreq;
 int curVol;//ranges 0 to 255
 int curFreqIndex = 0;
 int stopValue = 0;
+bool testerState = true;//True = initialFreqTestRun, False = recursiveFreqTestRun
 
 //Helper function definations
 int getCurrentFrequency(int freqIndex);
@@ -40,11 +41,13 @@ void setup() {
 }
 
 void loop() {
-  initialFreqTestRun();
-  delay(5000);
-  recursiveAdaptiveTestRun();
+  if(testerState){
+    initialFreqTestRun();
+  }
+  else{
+    recursiveAdaptiveTestRun();
+  }
 
-  exit(0);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,10 +89,12 @@ void initialFreqTestRun(){
   //prints the profile
   if (stopValue >= freqArrSize){
     tonePlayer.end();
+    testerState = false;
     Serial.println();
     for (int i = 0; i < freqArrSize; i++){
       Serial.print(interestedFreq[i]); Serial.print(": "); Serial.println(profile[interestedFreq[i]]);
     }
+    delay(4000);
   }
 }
 
