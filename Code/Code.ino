@@ -34,6 +34,7 @@ void loop() {
     curFreq = getCurrentFrequency(curFreqIndex);
     playFrequency(curFreq, curVol);
     buttonNew = digitalRead(buttonPin);
+    tonePlayer.delay(3000);
     Serial.println(curVol);
     //executes when button is pressed
     if (buttonNew == 0 ){
@@ -47,19 +48,19 @@ void loop() {
       curVol = 0;
       stopValue += 1;
       Serial.println(stopValue);
-
-      delay(2000);
     }
-    delay(3000);
-    
+
     if (curVol >= 0 && curVol < 255){
       curVol = curVol + 5;
+    }
+    else{
+      curVol = 0;
     }
   }
   
   //prints the profile
   if (stopValue >= freqArrSize){
-    tonePlayer.noTone();
+    tonePlayer.end();
     Serial.println();
     for (int i = 0; i < freqArrSize; i++){
       Serial.print(interestedFreq[i]); Serial.print(": "); Serial.println(profile[interestedFreq[i]]);
