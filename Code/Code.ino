@@ -34,7 +34,6 @@ void loop() {
     curFreq = getCurrentFrequency(curFreqIndex);
     playFrequency(curFreq, curVol);
     buttonNew = digitalRead(buttonPin);
-    tonePlayer.delay(3000);
     Serial.println(curVol);
     //executes when button is pressed
     if (buttonNew == 0 ){
