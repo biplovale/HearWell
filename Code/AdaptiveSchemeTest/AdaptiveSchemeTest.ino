@@ -1,56 +1,60 @@
 #include <ArxContainer.h>
 
-arx::map<float, int> profile {};
+arx::map<float, float> profile {};
+float pi = 3.14159;
+int recStep = 0;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  profile[125.0] = 100;
-  profile[250.0] = 50;
-//  profile[500] = 100;
+  profile[0] = (sin(0) * sin(0));
+  profile[2*pi] = (sin(2* pi) * sin(2*pi));
+//  profile[500.0] = 100;
 //  profile[1000] = 100;
 //  profile[2000] = 100;
 //  profile[3000] = 100;
 //  profile[4000] = 100;
 //  profile[8000] = 100;
 
-  Serial.println();
-  for (const auto& m : profile)
-  {
-      Serial.print("{");
-      Serial.print(m.first); Serial.print(",");
-      Serial.print(m.second);
-      Serial.println("}");
-  }
-
-  recursiveSimpson(125.0, 250.0, 0.1, NULL);
-
-  Serial.println();
-  for (const auto& m : profile)
-  {
-      Serial.print("{");
-      Serial.print(m.first); Serial.print(",");
-      Serial.print(m.second);
-      Serial.println("}");
-  }
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+Serial.println();
+  for (const auto& m : profile)
+  {
+      Serial.print("{");
+      Serial.print(m.first); Serial.print(",");
+      Serial.print(m.second);
+      Serial.println("}");
+  }
+  
+  recursiveSimpson(0, 2*pi, 0.000001, simpleSimpson(0, 2*pi));
 
+delay(2000);
+  Serial.println();
+  for (const auto& m : profile)
+  {
+      Serial.print("{");
+      Serial.print(m.first); Serial.print(",");
+      Serial.print(m.second);
+      Serial.println("}");
+  }
+
+  while(Serial.available() == 0){}
 }
 
 float simpleSimpson(float a, float b){
   float xMean = (a+b)/2.0;
   float interval = b - a;
-  int meanVolPoint;
+  float meanVolPoint;
 
   //taking input from user for vol
   Serial.print("Enter the volume for freq: ");
   Serial.println(xMean);
-  while(Serial.available() == 0){
-  }
-  meanVolPoint = Serial.parseInt();
+
+  meanVolPoint = sin(xMean) * sin(xMean);
   Serial.println(meanVolPoint);
   delay(1000);
   Serial.end();
@@ -61,7 +65,7 @@ float simpleSimpson(float a, float b){
   return (interval/6.0) * (profile[a] + (4 * meanVolPoint) + profile[b]);
 }
 
-void recursiveSimpson(float xF, float xL, float eps, float intLast){
+float recursiveSimpson(float xF, float xL, float eps, float intLast){
   float xMean = (xF+xL)/2.0;
   Serial.println(xMean);
   float intL;
@@ -81,16 +85,24 @@ void recursiveSimpson(float xF, float xL, float eps, float intLast){
   delay(1000);
   Serial.println(abs(intTotal - intLast) < 15 * eps);
   if(abs(intTotal - intLast) < 15 * eps){
-//    return ((16*intTotal) - intLast) / 15.0;
-      return;
+    recStep += 1;
+    return ((16*intTotal) - intLast) / 15.0;
   }
   else{
-//    return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
-    Serial.println("leftRecursion Start");
-    recursiveSimpson(xF, xMean, eps/2, intL);
-    Serial.println("leftRecursion End");
-    Serial.println("rightRecursion Start");
-    recursiveSimpson(xMean, xL, eps/2, intR);
-    Serial.println("leftRecursion End");
+    if (recStep <= 8){
+      recStep += 2;
+      return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
+    }
+    else{
+      return intLast;
+    }
+//    Serial.println("leftRecursion Start");
+//    float recurLeft = recursiveSimpson(xF, xMean, eps/2, intL);
+//    Serial.println("leftRecursion End");
+//    Serial.println("rightRecursion Start");
+//    float recurRight = recursiveSimpson(xMean, xL, eps/2, intR);
+//    Serial.println("leftRecursion End");
+//
+//    return recurLeft + recurRight;
   }
 } 
