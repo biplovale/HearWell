@@ -1,6 +1,7 @@
 #include <ArxContainer.h>
 
-arx::map<float, int> profile {};
+arx::map<float, float> profile {};
+
 float pi = 3.14159;
 int recStep = 0;
 
@@ -8,7 +9,8 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   profile[0] = (sin(0) * sin(0));
-  profile[2*pi] = (sin(pi*2) * sin(pi*2));
+  profile[2*pi] = (sin(2* pi) * sin(2*pi));
+//  profile[500.0] = 100;
 //  profile[1000] = 100;
 //  profile[2000] = 100;
 //  profile[3000] = 100;
@@ -32,6 +34,8 @@ Serial.println();
   recStep = 0;
   recursiveSimpson(0, 2*pi, 0.0001, simpleSimpson(0, 2*pi));
 
+
+delay(2000);
   Serial.println();
   for (const auto& m : profile)
   {
@@ -52,10 +56,9 @@ float simpleSimpson(float a, float b){
   //taking input from user for vol
   Serial.print("Enter the volume for freq: ");
   Serial.println(xMean);
-//  while(Serial.available() == 0){
-//  }
-  meanVolPoint = (sin(xMean) * sin(xMean));
+  meanVolPoint = sin(xMean) * sin(xMean);
   Serial.println(meanVolPoint);
+
   delay(1000);
   Serial.end();
   Serial.begin(9600);
@@ -96,6 +99,5 @@ float recursiveSimpson(float xF, float xL, float eps, float intLast){
     else{
       return ((16*intTotal) - intLast) / 15.0;
     }
-
   }
 } 
