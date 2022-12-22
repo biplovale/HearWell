@@ -1,13 +1,14 @@
 #include <ArxContainer.h>
 
 arx::map<float, int> profile {};
+float pi = 3.14159;
+int recStep = 0;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  profile[125.0] = 100;
-  profile[250.0] = 100;
-  profile[500.0] = 100;
+  profile[0] = (sin(0) * sin(0));
+  profile[2*pi] = (sin(pi*2) * sin(pi*2));
 //  profile[1000] = 100;
 //  profile[2000] = 100;
 //  profile[3000] = 100;
@@ -27,8 +28,9 @@ Serial.println();
       Serial.print(m.second);
       Serial.println("}");
   }
-  
-  recursiveSimpson(125.0, 250.0, 0.000001, simpleSimpson(125.0, 250.0));
+
+  recStep = 0;
+  recursiveSimpson(0, 2*pi, 0.0001, simpleSimpson(0, 2*pi));
 
   Serial.println();
   for (const auto& m : profile)
@@ -45,14 +47,14 @@ Serial.println();
 float simpleSimpson(float a, float b){
   float xMean = (a+b)/2.0;
   float interval = b - a;
-  int meanVolPoint;
+  float meanVolPoint;
 
   //taking input from user for vol
   Serial.print("Enter the volume for freq: ");
   Serial.println(xMean);
-  while(Serial.available() == 0){
-  }
-  meanVolPoint = Serial.parseInt();
+//  while(Serial.available() == 0){
+//  }
+  meanVolPoint = (sin(xMean) * sin(xMean));
   Serial.println(meanVolPoint);
   delay(1000);
   Serial.end();
@@ -83,17 +85,17 @@ float recursiveSimpson(float xF, float xL, float eps, float intLast){
   delay(1000);
   Serial.println(abs(intTotal - intLast) < 15 * eps);
   if(abs(intTotal - intLast) < 15 * eps){
+    recStep += 1;
     return ((16*intTotal) - intLast) / 15.0;
   }
   else{
-     return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
-//    Serial.println("leftRecursion Start");
-//    float recurLeft = recursiveSimpson(xF, xMean, eps/2, intL);
-//    Serial.println("leftRecursion End");
-//    Serial.println("rightRecursion Start");
-//    float recurRight = recursiveSimpson(xMean, xL, eps/2, intR);
-//    Serial.println("leftRecursion End");
-//
-//    return recurLeft + recurRight;
+    if (recStep <= 8){
+      recStep += 2;
+      return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
+    }
+    else{
+      return ((16*intTotal) - intLast) / 15.0;
+    }
+
   }
 } 
