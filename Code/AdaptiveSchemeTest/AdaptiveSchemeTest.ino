@@ -1,21 +1,24 @@
-#include <ArxContainer.h>
+#include <SPI.h>
+#include <SD.h>
+#include <map>
 
-arx::map<float, float> profile {};
+File myFile;
+std::map<float, float> profile {};
 
 float pi = 3.14159;
 int recStep = 0;
 
+int count = 0;
+
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  profile[0] = (sin(0) * sin(0));
-  profile[2*pi] = (sin(2* pi) * sin(2*pi));
-//  profile[500.0] = 100;
-//  profile[1000] = 100;
-//  profile[2000] = 100;
-//  profile[3000] = 100;
-//  profile[4000] = 100;
-//  profile[8000] = 100;
+  Serial.begin(115200);
+//  profile[0] = (sin(0) * sin(0));
+  profile.insert(std::make_pair(0.1, sin(1/0.1)));
+//  profile[2*pi] = (sin(2* pi) * sin(2*pi));
+  profile.insert(std::make_pair(pi, sin(1/pi)));
+
+
 
   
 }
@@ -32,19 +35,20 @@ Serial.println();
   }
 
   recStep = 0;
-  recursiveSimpson(0, 2*pi, 0.0001, simpleSimpson(0, 2*pi));
+  recursiveSimpson(0.1, pi, 0.000001, simpleSimpson(0.1, pi));
 
 
 delay(2000);
   Serial.println();
   for (const auto& m : profile)
   {
+      count ++;
       Serial.print("{");
       Serial.print(m.first); Serial.print(",");
       Serial.print(m.second);
       Serial.println("}");
   }
-
+  Serial.println(count);
   while(Serial.available() == 0){}
 }
 
@@ -56,14 +60,13 @@ float simpleSimpson(float a, float b){
   //taking input from user for vol
   Serial.print("Enter the volume for freq: ");
   Serial.println(xMean);
-  meanVolPoint = sin(xMean) * sin(xMean);
+  meanVolPoint = sin(1/xMean);
   Serial.println(meanVolPoint);
 
-  delay(1000);
-  Serial.end();
-  Serial.begin(9600);
+  delay(150);
 
-  profile[xMean] = meanVolPoint;
+//  profile[xMean] = meanVolPoint;
+  profile.insert(std::make_pair(xMean, meanVolPoint));
   
   return (interval/6.0) * (profile[a] + (4 * meanVolPoint) + profile[b]);
 }
@@ -85,7 +88,7 @@ float recursiveSimpson(float xF, float xL, float eps, float intLast){
   intTotal = intL + intR;
   Serial.println(intTotal);
 
-  delay(1000);
+  delay(150);
   Serial.println(abs(intTotal - intLast) < 15 * eps);
   if(abs(intTotal - intLast) < 15 * eps){
     recStep += 1;
