@@ -72,6 +72,7 @@ float simpleSimpson(float a, float b){
 }
 
 float recursiveSimpson(float xF, float xL, float eps, float intLast){
+  recStep += 1;
   float xMean = (xF+xL)/2.0;
   Serial.println(xMean);
   float intL;
@@ -91,12 +92,10 @@ float recursiveSimpson(float xF, float xL, float eps, float intLast){
   delay(150);
   Serial.println(abs(intTotal - intLast) < 15 * eps);
   if(abs(intTotal - intLast) < 15 * eps){
-    recStep += 1;
     return ((16*intTotal) - intLast) / 15.0;
   }
   else{
     if (recStep <= 8){
-      recStep += 2;
       return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
     }
     else{
