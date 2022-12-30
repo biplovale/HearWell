@@ -3,37 +3,40 @@
 #include <math.h>
 #include <map>
 
-//#define pi 3.14159
+//Adaptive Tester parameters
+#define EPS 0.000001
+#define MAX_REC_STEPS 8
 
 //Initial setup 
-int buttonPin = 2;//pull-up resistor with button; pressed -> 0
+int buttonPin = 2;                                                                        //pull-down resistor with button; unpressed -> 0 and pressed -> 1
 int freqArrSize = 8;
 int interestedFreq[8] = {125, 250, 500, 1000, 2000, 3000, 4000, 8000};
 std::map<float, float> profile {};
 portMUX_TYPE synch = portMUX_INITIALIZER_UNLOCKED;
 
 //Audio variables
-int PWM_FREQUENCY = 0; // this variable is used to define the time period 
-int PWM_CHANNEL = 0; // this variable is used to select the channel number
-int PWM_RESOUTION = 16; // this will define the resolution of the signal which is 16 in this case
-int GPIOPIN = 5 ; // GPIO to which we want to attach this channel signal
-volatile int dutyCycle = 0; // it will define the width of signal or also the one time
+int PWM_FREQUENCY = 0;                                                                    // this variable is used to select the frequency of pwm                                                    
+int PWM_CHANNEL = 0;                                                                      // this variable is used to select the channel number
+int PWM_RESOUTION = 16;                                                                   // this will define the resolution of the signal which is 16 in this case
+int GPIOPIN = 5 ;                                                                         // GPIO to which we want to attach this channel signal
+volatile int dutyCycle = 0;                                                               // it will define the width of signal or also the one time
 
 //Other variables
-volatile int curFreq;
-volatile int recordedVol;//ranges 0 to 255
-volatile bool volRecordState = false;//true = recording is still in progress
+volatile float curFreq;
+volatile int recordedVol;                                                                 //ranges 0 to 255
+volatile bool volRecordState = false;                                                     //true = recording is still in progress
 volatile int curFreqIndex = 0;
 volatile int stopValue = 0;
 int recStep = 0; 
-bool testerState = true;//True = initialFreqTestRun, False = recursiveFreqTestRun
-unsigned long previousMillis = 0;  //
-const long period = 250;         // period at which to blink in ms
+bool testerState = true;                                                                  //True = initialFreqTestRun, False = recursiveFreqTestRun
+unsigned long tonePreviousMillis = 0;                                                     // stores last recorded timestamp for audio change in ms
+const long tonePeriod = 250;                                                              // period at which to change audio in ms
+unsigned long buttonPreviousMicros = 0;                                                   //stores last recorded timestamp for button pressed in micro-sec
 
 //Helper function definations
 int getCurrentFrequency(int freqIndex);
-void playFreqAndRecordVol(int freq);//plays the tone and record the tone's cut-off volume (tone's volume that can't hear anymore)
-void stopPlayFreq(); //stops the tone playing
+void playFreqAndRecordVol(float freq);                                                    //plays the tone and record the tone's cut-off volume (tone's volume that can't hear anymore)
+void stopPlayFreq();                                                                      //stops the tone playing
 void IRAM_ATTR buttonPressedAction();
 float simpleSimpson(float a, float b);
 float recursiveSimpson(float xF, float xL, float eps, float intLast);
@@ -51,9 +54,6 @@ void setup() {
   Serial.begin(115200);
   pinMode(buttonPin, INPUT_PULLUP);
   attachInterrupt(buttonPin, buttonPressedAction, FALLING);
-
-//  profile.insert(std::make_pair(0.1, sin(1/0.1)));
-//  profile.insert(std::make_pair(pi, sin(1/pi)));
 
   //audio initial setup [a tone of 0 Hz with 0 volume; volume ranges 0 to 255]
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOUTION);
@@ -102,33 +102,21 @@ void initialFreqTestRun(){
 }
 
 void recursiveAdaptiveTestRun(){
-  for(int i = 0; i < (freqArrSize - 1); i++){
+  for(int i = 0; i < (freqArrSize - 2); i++){
     recStep = 0;
-    recursiveSimpson(interestedFreq[i], interestedFreq[i+1], 0.000001, NULL);
+    recursiveSimpson(interestedFreq[i], interestedFreq[i+1], EPS, NULL);
   }
 
-//  recStep = 0;
-//  recursiveSimpson(interestedFreq[0], interestedFreq[1], 0.000001, NULL);
-
+  int count = 0;
   for (const auto& m : profile)
   {
       Serial.print("{");
       Serial.print(m.first); Serial.print(",");
       Serial.print(m.second);
       Serial.println("}");
+      count++;
   }
-
-//  recStep = 0;
-//  recursiveSimpson(0.1, pi, 0.000001, simpleSimpson(0.1, pi));
-//
-//  Serial.println();
-//  for (const auto& m : profile)
-//  {
-//      Serial.print("{");
-//      Serial.print(m.first); Serial.print(",");
-//      Serial.print(m.second);
-//      Serial.println("}");
-//  }
+  Serial.println(count);
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -142,9 +130,9 @@ int getCurrentFrequency(int freqIndex){
   return result;
 }
 
-void playFreqAndRecordVol(int freq){
+void playFreqAndRecordVol(float freq){
   //set the new freq
-  PWM_FREQUENCY = freq;
+  PWM_FREQUENCY = (int)freq;
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOUTION);
   ledcAttachPin(GPIOPIN, PWM_CHANNEL);
   delay(100);
@@ -153,7 +141,7 @@ void playFreqAndRecordVol(int freq){
   dutyCycle = 0;
   while(volRecordState == true){
       unsigned long currentMillis = millis();
-      if(currentMillis - previousMillis >= period){
+      if(currentMillis - tonePreviousMillis >= tonePeriod){
         Serial.println(dutyCycle);
         ledcWrite(PWM_CHANNEL, dutyCycle);
 
@@ -164,7 +152,7 @@ void playFreqAndRecordVol(int freq){
           dutyCycle = 0;
         }
         
-        previousMillis = currentMillis;
+        tonePreviousMillis = currentMillis;
       }    
     }
 
@@ -186,16 +174,20 @@ void stopPlayFreq(){
 
 void IRAM_ATTR buttonPressedAction(){
   portENTER_CRITICAL(&synch);
-  recordedVol = dutyCycle;
-//  recordedVol = sin(1/curFreq);
-
-  volRecordState = false;
-
-  if(testerState == true){
-    curFreqIndex += 1;
-    stopValue += 1;
+  if (micros() - buttonPreviousMicros >= 200000){
+    if (volRecordState == true){
+      recordedVol = dutyCycle;
+    
+      volRecordState = false;
+    
+      if(testerState == true){
+        curFreqIndex += 1;
+        stopValue += 1;
+      }
+      Serial.println("buttonPressed");
+    }
+    buttonPreviousMicros = micros();
   }
-  Serial.println("buttonPressed");
   portEXIT_CRITICAL(&synch);
 }
 
@@ -204,7 +196,7 @@ float simpleSimpson(float a, float b){
   float interval = b - a;
   int meanVolPoint;
   
-  curFreq = (int)xMean;
+  curFreq = xMean;
   volRecordState = true;
   playFreqAndRecordVol(curFreq);
   meanVolPoint = recordedVol;
@@ -235,7 +227,7 @@ float recursiveSimpson(float xF, float xL, float eps, float intLast){
     return ((16*intTotal) - intLast) / 15.0;
   }
   else{
-    if (recStep <= 8){
+    if (recStep <= MAX_REC_STEPS){
       return recursiveSimpson(xF, xMean, eps/2, intL) + recursiveSimpson(xMean, xL, eps/2, intR);
     }
     else{
