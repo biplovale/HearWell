@@ -4,8 +4,8 @@
 #include <map>
 
 //Adaptive Tester parameters
-#define EPS 0.000001
-#define MAX_REC_STEPS 8
+#define EPS 100
+#define MAX_REC_STEPS 2
 
 //Initial setup 
 int buttonPin = 2;                                                                        //pull-down resistor with button; unpressed -> 0 and pressed -> 1
@@ -22,15 +22,19 @@ int GPIOPIN = 5 ;                                                               
 volatile int dutyCycle = 0;                                                               // it will define the width of signal or also the one time
 
 //Other variables
-volatile float curFreq;
+float curFreq;
 volatile int recordedVol;                                                                 //ranges 0 to 255
-volatile bool volRecordState = false;                                                     //true = recording is still in progress
-volatile int curFreqIndex = 0;
-volatile int stopValue = 0;
+bool volRecordState = false;                                                              //true = recording is still in progress
+volatile bool isVolRecordDown = false;                                                    //true = recording run from higher vol to lower vol
+volatile bool isVolRecordUpDone = false;                                                  //true = vol up run is done => vol up run record done
+volatile bool isVolRecordDownDone = false;                                                //true = vol down run is done => vol down run record done
+volatile int count = 0;
+int curFreqIndex = 0;
+int stopValue = 0;
 int recStep = 0; 
 bool testerState = true;                                                                  //True = initialFreqTestRun, False = recursiveFreqTestRun
 unsigned long tonePreviousMillis = 0;                                                     // stores last recorded timestamp for audio change in ms
-const long tonePeriod = 250;                                                              // period at which to change audio in ms
+const long tonePeriod = 40;                                                              // period at which to change audio in ms
 unsigned long buttonPreviousMicros = 0;                                                   //stores last recorded timestamp for button pressed in micro-sec
 
 //Helper function definations
@@ -104,7 +108,7 @@ void initialFreqTestRun(){
 void recursiveAdaptiveTestRun(){
   for(int i = 0; i < (freqArrSize - 2); i++){
     recStep = 0;
-    recursiveSimpson(interestedFreq[i], interestedFreq[i+1], EPS, NULL);
+    recursiveSimpson(interestedFreq[i], interestedFreq[i+1], EPS * (i+1), NULL);
   }
 
   int count = 0;
@@ -135,21 +139,72 @@ void playFreqAndRecordVol(float freq){
   PWM_FREQUENCY = (int)freq;
   ledcSetup(PWM_CHANNEL, PWM_FREQUENCY, PWM_RESOUTION);
   ledcAttachPin(GPIOPIN, PWM_CHANNEL);
-  delay(100);
+  delay(3000);
+  Serial.println();
+  Serial.print("       presenting the freq: "); Serial.println(freq);
+  ledcWrite(PWM_CHANNEL, 255);
+  delay(2000);
+  ledcWrite(PWM_CHANNEL, 0);
+  delay(1000);
   
   //play the tone in a loop until the button is pressed
   dutyCycle = 0;
+  int volSample1;
+  int volSample2;
   while(volRecordState == true){
       unsigned long currentMillis = millis();
       if(currentMillis - tonePreviousMillis >= tonePeriod){
         Serial.println(dutyCycle);
         ledcWrite(PWM_CHANNEL, dutyCycle);
 
-        if (dutyCycle >= 0 and dutyCycle <= 255){
-          dutyCycle++;
+        if (isVolRecordDown == false){
+          if (dutyCycle >= 0 and dutyCycle < 255){
+            dutyCycle++;
+          }
+          else{
+            recordedVol = 255;
+            count++;
+            isVolRecordDown = true;
+            isVolRecordUpDone = true;
+            Serial.println("max db for the speaker is noted as volume");
+          }       
         }
         else{
-          dutyCycle = 0;
+          if (dutyCycle > 0 and dutyCycle <= 255){
+            dutyCycle--;
+          }
+          else{
+            recordedVol = 0;
+            count++;
+            isVolRecordDown = false;
+            isVolRecordDownDone = true;
+            Serial.println("max db for the speaker is noted as volume");
+          }
+        }
+
+        if (isVolRecordUpDone == true){
+          volSample1 = recordedVol;
+      
+          //setting up for down vol run
+          delay(3000);
+          dutyCycle = 2 * dutyCycle;
+          if (!(dutyCycle <= 255)){
+            dutyCycle = 255;
+          }
+
+          isVolRecordUpDone = false;
+        }
+
+        if (isVolRecordDownDone == true){
+          volSample2 = recordedVol;
+          volRecordState = false;
+          isVolRecordDownDone = false;
+        }
+        
+        if(testerState == true and count >= 2){
+          curFreqIndex += 1;
+          stopValue += 1;
+          count = 0; 
         }
         
         tonePreviousMillis = currentMillis;
@@ -158,6 +213,9 @@ void playFreqAndRecordVol(float freq){
 
     //when button is pressed
     if(volRecordState == false){
+      Serial.print("volsample1"); Serial.println(volSample1);
+      Serial.print("volsample2"); Serial.println(volSample2);
+      recordedVol = (int)((volSample1 + volSample2)/2.0);
       profile.insert(std::make_pair(curFreq, recordedVol));
       Serial.print("The volume for freq "); Serial.print(curFreq); Serial.print(" : "); Serial.println(recordedVol);
     }
@@ -177,13 +235,18 @@ void IRAM_ATTR buttonPressedAction(){
   if (micros() - buttonPreviousMicros >= 200000){
     if (volRecordState == true){
       recordedVol = dutyCycle;
-    
-      volRecordState = false;
-    
-      if(testerState == true){
-        curFreqIndex += 1;
-        stopValue += 1;
+
+      count++;
+
+      if (isVolRecordDown == false){
+        isVolRecordDown = true;
+        isVolRecordUpDone = true;
       }
+      else{
+        isVolRecordDown = false;
+        isVolRecordDownDone = true;
+      }
+    
       Serial.println("buttonPressed");
     }
     buttonPreviousMicros = micros();
